@@ -830,7 +830,9 @@ class TestAccountInfoCache(ReportTestBase):
         common.account_info(CID)
         common.account_info(CID)
         self.assertEqual(len(self.service.queries), 1)
-        self.assertEqual(common.account_info(CID)["time_zone"], "America/New_York")
+        self.assertEqual(
+            common.account_info(CID)["time_zone"], "America/New_York"
+        )
 
     def test_account_info_not_cached_in_remote_mode(self):
         with patch("ads_mcp.utils.is_remote_oauth_mode", return_value=True):
