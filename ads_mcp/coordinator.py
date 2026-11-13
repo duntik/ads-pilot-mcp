@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Modified by ads-pilot-mcp contributors: read-only mode hides mutate tools
+# at mount time (see ads_mcp/safety/read_only.py).
 
 """Module declaring the singleton MCP instance.
 
@@ -91,6 +94,7 @@ ensure_subscriptions_listen(mcp)
 def initialize_and_mount_tools(parent_mcp: FastMCP) -> None:
     """Loads the tools configuration and dynamically mounts the tools sub-servers."""
     from ads_mcp.config import ToolsConfig
+    from ads_mcp.safety.read_only import should_hide
     import importlib
     import pkgutil
     import ads_mcp.tools as tools_pkg
@@ -125,12 +129,18 @@ def initialize_and_mount_tools(parent_mcp: FastMCP) -> None:
 
         # Filter disabled tools inside the sub-server before mounting
         tool_names = []
+        hidden_tools = set()
         for key, val in sub_mcp.local_provider._components.items():
             if key.startswith("tool:"):
                 tool_names.append(val.name)
+                # ads-pilot-mcp: read-only mode hides every mutate tool.
+                if should_hide(val):
+                    hidden_tools.add(val.name)
 
         for name in tool_names:
-            if not config.is_tool_enabled(category, name):
+            if name in hidden_tools or not config.is_tool_enabled(
+                category, name
+            ):
                 sub_mcp.local_provider.remove_tool(name)
 
         # Determine prefix/namespace

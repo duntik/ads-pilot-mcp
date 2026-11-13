@@ -2,6 +2,9 @@
 #
 # Tools configuration for the Google Ads MCP server.
 # Modify this file to enable/disable tool namespaces or set custom prefixes.
+#
+# Modified by ads-pilot-mcp contributors: added the "reports" and "safety"
+# namespaces and the "safety" section. See docs/SAFETY.md.
 
 namespaces:
   customers: true
@@ -9,3 +12,34 @@ namespaces:
   metadata: true
   labels: true
   assets: true
+  # ads-pilot-mcp
+  reports: true
+  safety: true
+
+# ads-pilot-mcp safety layer. Every key is optional; the values below are the
+# defaults. ADS_PILOT_* environment variables override these values.
+# Money limits are in each account's own currency units (not micros).
+# Use null for "no limit".
+safety:
+  # true hides every mutate tool and refuses every mutation.
+  read_only: false
+  # Empty list = every account the credentials can reach.
+  allowed_customer_ids: []
+  max_operations_per_mutate: 100
+  max_budget_increase_pct: 50
+  max_daily_budget: null
+  max_bid_change_pct: 50
+  max_cpc: null
+  # Append-only JSONL audit log of committed and blocked mutations.
+  audit_log: true
+  # Defaults to <state_dir>/audit.jsonl.
+  audit_log_path: null
+  # Defaults to the per-user data directory (for example
+  # ~/.local/share/ads-pilot-mcp or %LOCALAPPDATA%\ads-pilot-mcp).
+  state_dir: null
+  # Per-account limits, for example for accounts in other currencies:
+  # customer_overrides:
+  #   "1234567890":
+  #     max_daily_budget: 500
+  #     max_cpc: 5
+  customer_overrides: {}

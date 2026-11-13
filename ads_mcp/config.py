@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Modified by ads-pilot-mcp contributors: added the "reports" and "safety"
+# default namespaces.
 
 """Configuration management for the Google Ads MCP server."""
 
@@ -28,7 +31,16 @@ DEFAULT_CONFIG_FILE = "tools_config.yaml"
 CONFIG_PATH_ENV_VAR = "GOOGLE_ADS_MCP_TOOLS_CONFIG"
 
 # Default categories that are supported by the server
-ALL_CATEGORIES = ["customers", "search", "metadata", "labels", "assets"]
+ALL_CATEGORIES = [
+    "customers",
+    "search",
+    "metadata",
+    "labels",
+    "assets",
+    # ads-pilot-mcp namespaces.
+    "reports",
+    "safety",
+]
 
 
 class ToolsConfig:
