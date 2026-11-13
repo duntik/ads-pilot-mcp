@@ -1,0 +1,46 @@
+ads-pilot-mcp
+Copyright 2026 ads-pilot-mcp contributors
+
+This product is a modified version of google-ads-mcp
+(https://github.com/googleads/google-ads-mcp),
+Copyright 2026 Google LLC, licensed under the Apache License, Version 2.0.
+The original license is in the LICENSE file.
+
+ads-pilot-mcp is not affiliated with, sponsored by or endorsed by Google LLC.
+"Google" and "Google Ads" are trademarks of Google LLC and are used here only
+to describe what the software works with.
+
+Changes made by ads-pilot-mcp contributors
+------------------------------------------
+
+New code (all under the Apache License, Version 2.0):
+
+* ads_mcp/safety/      - safety layer: read-only mode, policy limits,
+                         customer allow-list, append-only audit log, undo
+                         snapshots and reverse-operation builder.
+* ads_mcp/reports/     - curated read-only report tools ("reports" namespace).
+* ads_mcp/tools/pilot/ - registration of the new namespaces and the
+                         "safety" tools (get_safety_settings, list_changes,
+                         undo_change).
+* tests/pilot/         - unit tests for the above.
+* NOTICE, docs/ARCHITECTURE.md, docs/SAFETY.md, docs/ROADMAP.md.
+
+Modified upstream files (each carries a "Modified by ads-pilot-mcp
+contributors" line under its license header where the format allows it):
+
+* ads_mcp/propose_and_confirm.py - optional safety hook called by
+                                   propose_and_confirm().
+* ads_mcp/coordinator.py         - read-only mode hides mutate tools when
+                                   tools are mounted.
+* ads_mcp/config.py              - "reports" and "safety" default namespaces.
+* ads_mcp/tools_config.yaml      - new namespaces and the "safety" section.
+* pyproject.toml                 - project name, version, description,
+                                   authors, URLs, "ads-pilot-mcp" script
+                                   ("google-ads-mcp" kept as an alias),
+                                   NOTICE packaged with the license.
+* MANIFEST.in                    - NOTICE included in source distributions.
+* .github/workflows/ci.yml       - ads-pilot test and secret-scan job.
+* .github/workflows/release.yml  - package name ads-pilot-mcp.
+* tests/smoke/golden_tools_list.json, tests/smoke/llm_cases.json,
+  tests/smoke/llm_test.py        - new tools in the smoke and LLM tests.
+* README.md, CONTRIBUTING.md     - rewritten / extended for ads-pilot-mcp.
