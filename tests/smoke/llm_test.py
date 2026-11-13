@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Modified by ads-pilot-mcp contributors: a curated report tool is also a
+# valid answer to a data question that expects search.
 
 import json
 import os
@@ -78,6 +81,14 @@ class LLMToolSelectionTest(unittest.TestCase):
                     # as it may not have the metadata info in the prompt or in the context.
                     print(
                         f"  -> Success (metadata lookup): {selected_tool}",
+                        file=sys.stderr,
+                    )
+                elif (selected_tool or "").startswith(
+                    "reports_"
+                ) and expected_tool == "search_search":
+                    # ads-pilot-mcp: report tools answer data questions too.
+                    print(
+                        f"  -> Success (report tool): {selected_tool}",
                         file=sys.stderr,
                     )
                 else:

@@ -151,5 +151,37 @@
     "thought_tokens": null,
     "model": "gemini-3.5-flash-lite",
     "tool_tokens": 72
+  },
+  {
+    "prompt": "How much did each campaign spend last month in account {customer_id}, and what was the cost per conversion?",
+    "expected_tool": "reports_account_overview"
+  },
+  {
+    "prompt": "Which search terms cost money but never converted in account {customer_id}?",
+    "expected_tool": "reports_wasted_spend"
+  },
+  {
+    "prompt": "Am I on track to spend my budgets this month for customer {customer_id}?",
+    "expected_tool": "reports_budget_pacing"
+  },
+  {
+    "prompt": "What changed in account {customer_id} during the last 7 days?",
+    "expected_tool": "reports_change_history"
+  },
+  {
+    "prompt": "List the conversion actions for customer {customer_id} and show which ones are primary.",
+    "expected_tool": "reports_conversion_actions"
+  },
+  {
+    "prompt": "Show the quality scores of my keywords for customer {customer_id}.",
+    "expected_tool": "reports_keyword_performance"
+  },
+  {
+    "prompt": "What are the active safety limits for budget and bid changes?",
+    "expected_tool": "safety_get_safety_settings"
+  },
+  {
+    "prompt": "Revert change 20260101T120000Z-1a2b3c4d.",
+    "expected_tool": "safety_undo_change"
   }
 ]
