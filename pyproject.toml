@@ -2,25 +2,30 @@
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
+# Modified by ads-pilot-mcp contributors: project name, version, description,
+# authors, URLs and the ads-pilot-mcp script. Based on googleads/google-ads-mcp.
+
 [project]
-name = "google-ads-mcp"
-version = "0.0.6"
+name = "ads-pilot-mcp"
+version = "0.1.0"
 requires-python = ">=3.10"
 license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 dependencies = [
     "google-ads>=33.0.0",
     "mcp[cli]>=2.0.0,<3",
     "fastmcp[tasks]>=4.0.6,<5"
 ]
 
-description = "MCP Server for Google Ads, depends on Google Ads API."
+description = "ads-pilot-mcp: an MCP server for Google Ads with curated reports and a safety layer for changes. Based on googleads/google-ads-mcp; not affiliated with Google."
 readme = "README.md"
 authors = [
     { name = "Dean Lukies", email = "lukiesd@users.noreply.github.com" },
     { name = "Mattia Tommasone", email = "Raibaz@users.noreply.github.com" },
     { name = "Ben Karl", email = "benrkarl@users.noreply.github.com" },
+    { name = "ads-pilot-mcp contributors" },
 ]
-keywords = ["Google Ads", "Google Ads API", "MCP"]
+keywords = ["Google Ads", "Google Ads API", "MCP", "PPC", "reporting"]
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
@@ -38,10 +43,13 @@ firestore = [
 ]
 
 [project.urls]
-homepage = "https://github.com/googleads/google-ads-mcp"
-repository = "https://github.com/googleads/google-ads-mcp.git"
-issues = "https://github.com/googleads/google-ads-mcp/issues"
+homepage = "https://github.com/duntik/ads-pilot-mcp"
+repository = "https://github.com/duntik/ads-pilot-mcp.git"
+issues = "https://github.com/duntik/ads-pilot-mcp/issues"
+upstream = "https://github.com/googleads/google-ads-mcp"
 
 [project.scripts]
+ads-pilot-mcp = "ads_mcp.server:run_server"
+# Kept as an alias so existing upstream client configurations keep working.
 google-ads-mcp = "ads_mcp.server:run_server"
 google-ads-mcp-update-gaql = "ads_mcp.update_references:update_gaql_resource_file"

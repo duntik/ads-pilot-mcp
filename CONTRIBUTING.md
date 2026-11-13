@@ -1,5 +1,20 @@
 # How to Contribute
 
+> **ads-pilot-mcp note.** This repository is a fork of
+> [googleads/google-ads-mcp](https://github.com/googleads/google-ads-mcp).
+> Contributions to ads-pilot-mcp are made under the Apache License 2.0 and do
+> not need a Google CLA. Open pull requests against
+> `duntik/ads-pilot-mcp`. Changes that would help every user of the upstream
+> server (bug fixes in upstream code) are best proposed upstream, under the
+> upstream rules below. New ads-pilot-mcp code goes in `ads_mcp/safety/`,
+> `ads_mcp/reports/` or `ads_mcp/tools/pilot/` with tests in `tests/pilot/`;
+> keep edits to upstream files small and mark them with a
+> "Modified by ads-pilot-mcp contributors" comment. Every new mutate tool must
+> go through `ads_mcp.safety.hooks.guarded_propose_and_confirm`
+> (see [docs/SAFETY.md](docs/SAFETY.md)).
+>
+> The rest of this file is the upstream guide.
+
 We'd love to accept your patches and contributions to this project. There are
 just a few small guidelines you need to follow.
 

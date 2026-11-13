@@ -1,3 +1,4 @@
+# Modified by ads-pilot-mcp contributors: package name ads-pilot-mcp.
 name: Release
 
 on:
@@ -118,7 +119,7 @@ jobs:
           import urllib.request
 
           version = os.environ["PACKAGE_VERSION"]
-          url = f"https://pypi.org/pypi/google-ads-mcp/{version}/json"
+          url = f"https://pypi.org/pypi/ads-pilot-mcp/{version}/json"
           request = urllib.request.Request(
               url,
               headers={"Accept": "application/json"},
@@ -133,7 +134,7 @@ jobs:
               raise
 
           raise SystemExit(
-              f"google-ads-mcp {version} already exists on PyPI; "
+              f"ads-pilot-mcp {version} already exists on PyPI; "
               "published versions cannot be replaced"
           )
           PY
@@ -231,7 +232,7 @@ jobs:
 
           import ads_mcp
 
-          installed_version = importlib.metadata.version("google-ads-mcp")
+          installed_version = importlib.metadata.version("ads-pilot-mcp")
           if installed_version != os.environ["PACKAGE_VERSION"]:
               raise SystemExit(
                   f"installed version {installed_version!r} does not match "
@@ -266,7 +267,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/google-ads-mcp
+      url: https://test.pypi.org/p/ads-pilot-mcp
     permissions:
       contents: read
       id-token: write
@@ -290,7 +291,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/google-ads-mcp
+      url: https://pypi.org/p/ads-pilot-mcp
     permissions:
       contents: read
       id-token: write

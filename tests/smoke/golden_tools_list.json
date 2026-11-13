@@ -800,6 +800,1347 @@
       "annotations": {
         "readOnlyHint": true
       },
+      "description": "Spend, clicks, impressions, conversions and cost per conversion by\ncampaign for a date range, plus account totals.\n\nCampaigns are sorted by cost (highest first). Totals cover the whole\naccount for the range, not only the rows on this page. Money is in the\naccount currency (not micros). Campaigns paused or removed during the\nrange are included, so totals are complete.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890' or '123-456-7890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD (implies CUSTOM)."
+          },
+          "include_zero_impressions": {
+            "default": false,
+            "description": "Also list campaigns with no impressions.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID for the login-customer-id header."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page (use `next_offset` from the previous call).",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD (implies CUSTOM)."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_account_overview",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Account Overview"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Ad performance with ad strength and approval status, sorted by cost.\n\nFor responsive search ads, `include_assets=True` adds each headline and\ndescription with its performance label (BEST, GOOD, LOW, LEARNING,\nPENDING) where Google reports one, and its pin position.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only ads in this ad group (numeric ID)."
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only ads in this campaign (numeric ID)."
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD."
+          },
+          "include_assets": {
+            "default": true,
+            "description": "Add RSA headline/description performance labels.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 10,
+            "description": "Ads per page (1-200; keep it small when include_assets is on).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_ad_performance",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Ad Performance"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Month-to-date spend against each campaign budget, with a projection\nfor the full month.\n\nOne row per budget (a shared budget lists all its campaigns). For daily\nbudgets: `expected_mtd` = daily budget x elapsed days, `pace_pct` =\nspend / expected, `projected_month` = spend / elapsed days x days in the\nmonth, and `monthly_limit` = daily budget x 30.4 (the most Google\ncharges per month). `pace` is UNDER (<85 %), ON_TRACK or OVER (>115 %).\nUses the account time zone. Rows are sorted by month-to-date spend.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "limit": {
+            "default": 50,
+            "description": "Budgets per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_budget_pacing",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Budget Pacing"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Recent changes to the account from `change_event`, newest first:\nwho changed what, when, with which tool, and which fields.\n\nGoogle keeps change events for the last 30 days only.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "days": {
+            "default": 7,
+            "description": "How many days back to look (1-30).",
+            "type": "integer"
+          },
+          "include_values": {
+            "default": false,
+            "description": "Add the old and new value of each changed field.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional filter such as CAMPAIGN, AD_GROUP, AD_GROUP_AD,\nAD_GROUP_CRITERION, CAMPAIGN_BUDGET, CAMPAIGN_CRITERION or ASSET."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_change_history",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Change History"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Lists conversion actions with status, primary/secondary,\ninclude-in-conversions, counting, attribution and whether the action\nis imported from GA4.\n\nWith `include_stats=True` adds conversions and all conversions for the\nlast 30 days, so actions that stopped recording stand out.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "include_removed": {
+            "default": false,
+            "description": "Also list removed conversion actions.",
+            "type": "boolean"
+          },
+          "include_stats": {
+            "default": true,
+            "description": "Add last-30-day conversion counts per action.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_conversion_actions",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Conversion Actions"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Performance by location, sorted by cost, with location names.\n\n`view=\"geographic\"` (`geographic_view`) reports the location that\ntriggered the ad, split by location type: LOCATION_OF_PRESENCE (people\nin the area) or AREA_OF_INTEREST (people searching for it), so a place\ncan appear twice. `view=\"user_location\"` (`user_location_view`) reports\nwhere users physically were, with `targeted` telling whether that\nlocation was targeted.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD."
+          },
+          "level": {
+            "default": "region",
+            "description": "Location granularity: country, region, city or most_specific.",
+            "enum": [
+              "country",
+              "region",
+              "city",
+              "most_specific"
+            ],
+            "type": "string"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD."
+          },
+          "view": {
+            "default": "geographic",
+            "description": "'geographic' or 'user_location'.",
+            "enum": [
+              "geographic",
+              "user_location"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_geo_performance",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Geo Performance"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Keyword performance with Quality Score and its three components,\nsorted by cost.\n\nQuality Score components are BELOW_AVERAGE, AVERAGE or ABOVE_AVERAGE:\n`expected_ctr`, `ad_relevance` and `landing_page_experience`. Quality\nScore is the current value, not a value for the date range, and is left\nout when Google has too little data. `cpc_bid` is the effective max CPC.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this ad group (numeric ID)."
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this campaign (numeric ID)."
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD."
+          },
+          "include_zero_impressions": {
+            "default": false,
+            "description": "Also list keywords with no impressions.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_keyword_performance",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Keyword Performance"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Performance by landing page, sorted by cost.\n\nBy default groups by the final URL set on the ad (`landing_page_view`).\nWith `expanded=True` groups by the URL users actually landed on, after\nURL expansion and tracking parameters (`expanded_landing_page_view`).\nIncludes the mobile-friendly click rate and the landing page speed score\n(1-10) where Google reports them.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD."
+          },
+          "expanded": {
+            "default": false,
+            "description": "Group by the expanded (actual) landing page URL.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_landing_page_performance",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Landing Page Performance"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Lists Google's recommendations for the account with their estimated\nimpact (potential minus base metrics for the week).\n\nRead only: this tool does not apply or dismiss anything. Budget and\nkeyword recommendations include their details (current vs recommended\nbudget; keyword text, match type and suggested CPC).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only recommendations for this campaign (numeric ID)."
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "include_dismissed": {
+            "default": false,
+            "description": "Also list dismissed recommendations.",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional recommendation types, e.g. ['CAMPAIGN_BUDGET', 'KEYWORD',\n'SITELINK_ASSET', 'TARGET_CPA_OPT_IN', 'MAXIMIZE_CONVERSIONS_OPT_IN']."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_recommendations_list",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Recommendations List"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Search terms that triggered ads, with match type and a\n`suggested_negative` flag, sorted by cost.\n\n`suggested_negative` is a simple heuristic, not a decision: a term is\nflagged when it has 0 conversions, at least `negative_min_clicks`\nclicks, costs at least `negative_min_cost` (when given) and is not\nalready excluded. Review the terms before adding negatives.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this ad group (numeric ID)."
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only this campaign (numeric ID)."
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD."
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "min_impressions": {
+            "default": 1,
+            "description": "Minimum impressions for a term to be listed.",
+            "type": "integer"
+          },
+          "negative_min_clicks": {
+            "default": 5,
+            "description": "Clicks needed before a non-converting term is flagged.",
+            "type": "integer"
+          },
+          "negative_min_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional minimum cost (account currency) before flagging."
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "only_suggested_negatives": {
+            "default": false,
+            "description": "Return only the flagged terms.",
+            "type": "boolean"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_search_terms_report",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Search Terms Report"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Search terms and keywords that cost more than `min_cost` and brought\nzero conversions in the date range, sorted by cost (highest first).\n\nUse it to find negative keyword and pausing candidates. \"Zero\nconversions\" uses the `conversions` metric, so it depends on which\nconversion actions count as primary.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "Google Ads customer ID (e.g. '1234567890')."
+          },
+          "date_range": {
+            "default": "LAST_30_DAYS",
+            "description": "A preset range, or CUSTOM together with start_date and end_date.",
+            "enum": [
+              "TODAY",
+              "YESTERDAY",
+              "LAST_7_DAYS",
+              "LAST_14_DAYS",
+              "LAST_30_DAYS",
+              "THIS_MONTH",
+              "LAST_MONTH",
+              "CUSTOM"
+            ],
+            "type": "string"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range end, YYYY-MM-DD."
+          },
+          "limit": {
+            "default": 25,
+            "description": "Rows per page for each list (1-200).",
+            "type": "integer"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager account ID."
+          },
+          "min_cost": {
+            "default": 0.0,
+            "description": "Only rows that cost more than this, in account currency (not micros).",
+            "type": "number"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Row offset for the next page.",
+            "type": "integer"
+          },
+          "source": {
+            "default": "both",
+            "description": "'search_terms', 'keywords' or 'both'.",
+            "enum": [
+              "both",
+              "search_terms",
+              "keywords"
+            ],
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Custom range start, YYYY-MM-DD."
+          }
+        },
+        "required": [
+          "customer_id"
+        ],
+        "type": "object"
+      },
+      "name": "reports_wasted_spend",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Reports Wasted Spend"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Returns the active safety settings: read-only mode, the customer\nallow-list and the budget, bid and operation limits.\n\nCall this before proposing a change to learn which limits apply. Money\nlimits are in each account's own currency units, not micros.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "name": "safety_get_safety_settings",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Safety Get Safety Settings"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Lists recent reversible changes made through this server, newest first.\n\nUse it to find the `change_id` to pass to `undo_change`. Only field\nupdates that the safety layer could snapshot (statuses, budgets, bids,\nbidding targets) are listed.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional customer ID filter (e.g. '1234567890')."
+          },
+          "limit": {
+            "default": 20,
+            "description": "Maximum number of changes to return (1-100).",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "safety_list_changes",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "title": "Safety List Changes"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false
+      },
+      "description": "Reverts a change made through this server by restoring the \"before\"\nvalues that were saved when the change was committed.\n\nWorks for simple field updates: campaign, ad group, keyword and ad\nstatus; campaign budget amounts; CPC bids; tCPA / tROAS targets. Use\n`list_changes` to find the `change_id`.\n\nBefore reverting, the tool reads the current values. If any field was\nchanged again after the original change, the undo is refused unless\n`force=True`. Budget and bid limits apply to the undo as to any change.\n\nPropose & Confirm Workflow (`validate_only` and `checksum`):\n1. Call `undo_change` with `validate_only=True` (the default). The tool\n   validates the reverse operations with the API and returns\n   `change_items` and a `checksum` without changing anything.\n2. Present the `change_items` to the user and wait for explicit approval.\n3. Call `undo_change` again with `validate_only=False`, the same\n   parameters and the `checksum`.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "change_id": {
+            "description": "The change ID returned when the change was committed\n(e.g. '20260101T120000Z-1a2b3c4d').",
+            "type": "string"
+          },
+          "checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Checksum from the previous `validate_only=True` call.\nRequired when `validate_only=False`."
+          },
+          "force": {
+            "default": false,
+            "description": "Revert even if a field was changed again after the original\nchange. The fields are set to the saved \"before\" values.",
+            "type": "boolean"
+          },
+          "login_customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional manager customer ID; defaults to the one\nused for the original change."
+          },
+          "validate_only": {
+            "default": true,
+            "description": "If True (default), only proposes the undo.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "change_id"
+        ],
+        "type": "object"
+      },
+      "name": "safety_undo_change",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "title": "Safety Undo Change"
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true
+      },
       "description": "Fetches data from the Google Ads API using the search method",
       "inputSchema": {
         "additionalProperties": false,

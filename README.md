@@ -1,229 +1,159 @@
-# Google Ads MCP Server
+<!-- Modified by ads-pilot-mcp contributors: rewritten for ads-pilot-mcp; the
+     upstream README is at https://github.com/googleads/google-ads-mcp -->
 
-This repo contains the source code for running an
-[MCP](https://modelcontextprotocol.io) server that interacts with the
-[Google Ads API](https://developers.google.com/google-ads/api).
+# ads-pilot-mcp — an MCP server for Google Ads
 
-## Tools
+> **Not affiliated with or endorsed by Google. Based on
+> [googleads/google-ads-mcp](https://github.com/googleads/google-ads-mcp).**
+> "Google" and "Google Ads" are trademarks of Google LLC.
 
-The server uses the
-[Google Ads API](https://developers.google.com/google-ads/api/reference/rpc/latest/overview)
-to provide several
-[Tools](https://modelcontextprotocol.io/docs/concepts/tools) and [Resources](https://modelcontextprotocol.io/docs/concepts/tools) for use with LLMs and AI agents.
+ads-pilot-mcp is an [MCP](https://modelcontextprotocol.io) server that lets an
+AI assistant (Claude, Codex, Gemini, Cursor and others) read everything in a
+Google Ads account and, in later stages, change it safely. It is a soft fork
+of Google's open-source `google-ads-mcp` server: every upstream tool is still
+here and works the same way, and ads-pilot-mcp adds:
 
-### Tools available
+- **curated report tools** that answer the usual account questions (spend,
+  wasted spend, search terms, Quality Score, landing pages, geo, ads, budget
+  pacing, change history, conversion actions, recommendations) with compact
+  JSON and a short markdown summary;
+- **a safety layer** in front of every change: read-only mode, policy limits
+  on budgets and bids, a customer allow-list, an append-only audit log, and
+  undo for simple field changes.
 
-- `search`: Retrieves information about the Google Ads account using GAQL.
-- `get_resource_metadata`: Retrieves metadata about a Google Ads API resource type, for example "campaign". This is useful to understand the structure of the data and what fields are available for querying.
-- `list_accessible_customers`: Returns IDs of customers directly accessible
-  by the user authenticating the call.
-- `create_asset`: Creates Google Ads assets (`TEXT`, `IMAGE`, `YOUTUBE_VIDEO`, `SITELINK`, `CALLOUT`, `STRUCTURED_SNIPPET`, and other asset types via `extra_params`). Note: `image_asset_path` is supported in local `stdio` mode only; use base64 `image_asset_data` for remote HTTP deployments.
-- `upload_video_asset`: Uploads a local video file to YouTube via the Google Ads API using a background task so it can be referenced by video assets (supported in local `stdio` mode only).
-- `manage_labels`: Creates, updates, and removes account labels.
-- `manage_label_associations`: Creates and removes label associations on `CAMPAIGN`, `CUSTOMER`, `AD_GROUP`, and `AD_GROUP_CRITERION` resources.
+The project is at **v0.1.0**: the read and report tools and the safety layer
+are done. Write tools for campaigns, budgets, bids and keywords come in
+stage 2 — see the [roadmap](docs/ROADMAP.md).
 
-### Propose & Confirm Safety Workflow (Mutate Tools)
+## Contents
 
-All write/mutate tools (`create_asset`, `upload_video_asset`, `manage_labels`, and `manage_label_associations`) enforce a two-step **Propose & Confirm** safety workflow:
+- [Upstream vs ads-pilot-mcp](#upstream-vs-ads-pilot-mcp)
+- [Safety model](#safety-model)
+- [Install](#install)
+- [Authentication](#authentication)
+- [Configuration](#configuration)
+- [Tools](#tools)
+- [Roadmap](#roadmap)
+- [Development](#development)
+- [Disclaimer](#disclaimer)
 
-1. **Propose (`validate_only=True`, default)**: Validates the operation (including a Google Ads API `validate_only` dry run where supported) without committing changes, returning human-readable `change_items` and a cryptographic `checksum` bound to the customer ID and parameters.
-2. **Confirm (`validate_only=False`)**: Requires passing the exact same parameters and `customer_id` together with the `checksum` returned in step 1 after explicit user approval. Any missing or mismatched checksum is rejected before mutating the account.
+## Upstream vs ads-pilot-mcp
 
-### Configuring and Namespacing Tools
+| Area | googleads/google-ads-mcp | ads-pilot-mcp adds |
+| --- | --- | --- |
+| Reading data | `search` (free-form GAQL), `get_resource_metadata`, `list_accessible_customers` | 11 curated report tools with validated parameters, money in account currency, paging and row caps |
+| Writing data | `create_asset`, `upload_video_asset`, `manage_labels`, `manage_label_associations` | Stage 2: status, budgets, bids and targets, keywords and negatives, RSAs, URLs, targeting, assets, conversions, recommendations ([roadmap](docs/ROADMAP.md)) |
+| Change safety | Propose → confirm with a checksum (`validate_only=True` by default) | Read-only mode, budget/bid/operation limits, customer allow-list, audit log, undo — applied to upstream tools too |
+| Undo | — | `undo_change` for status, budget and bid/target changes, with a drift check |
+| Output size | Raw rows | Short keys, micros converted, strings truncated, 25 rows per page by default |
+| Configuration | `tools_config.yaml` namespaces | Same file, plus a `safety:` section and `ADS_PILOT_*` env vars |
+| Package | `google-ads-mcp` | `ads-pilot-mcp` (the `google-ads-mcp` command still works) |
 
-The Google Ads MCP server uses `tools_config.yaml` to let you selectively enable or disable individual tools or tool categories (namespaces) and customize their namespace prefixes.
+Upstream changes are merged regularly; ads-pilot-mcp keeps its own code in
+separate modules so merges stay easy (see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
-A default `tools_config.yaml` with all tools enabled is bundled with the package, so the server works out of the box with no extra setup. For strictly read-only deployments, set `labels: false` and `assets: false` in your `tools_config.yaml`. To customize your installation, the server resolves the configuration in the following order:
+## Safety model
 
-1. An explicit path set via the `GOOGLE_ADS_MCP_TOOLS_CONFIG` environment variable.
-2. A `tools_config.yaml` file in the current working directory.
-3. The default `tools_config.yaml` bundled with the package.
+Every tool that can change an account goes through the same steps:
 
-If an explicitly requested configuration file (via the environment variable) is missing, or any resolved file is invalid, the server raises an error and fails to start.
+1. **Propose.** The tool is called with `validate_only=True` (the default).
+   The server checks the safety policy, asks the Google Ads API to validate
+   the change without applying it, and returns human-readable
+   `change_items` plus a `checksum`. Nothing changes.
+2. **Review.** The assistant shows the `change_items` to you and waits for
+   your explicit approval.
+3. **Confirm.** The tool is called again with `validate_only=False`, the same
+   parameters and the `checksum`. The server checks the policy again,
+   verifies the checksum (so the change cannot be swapped between steps),
+   applies it, writes the audit log and stores an undo snapshot.
 
-#### Configuration Example:
-```yaml
-namespaces:
-  # Option 1: Enable category 'customers' with default prefix -> "customers_list_accessible_customers"
-  customers: true
+On top of that:
 
-  # Option 2: Enable category 'search' with a custom prefix -> "query_search"
-  search: "query"
+- **Read-only mode** (`ADS_PILOT_READ_ONLY=true`) hides every tool that can
+  change anything and refuses every mutation.
+- **Policy limits** cap budget increases (%), daily budgets, bid changes (%),
+  CPC bids, and the number of operations per call. A change outside the
+  limits is refused at propose time.
+- **Allow-list**: only the customer IDs you list can be changed.
+- **Audit log**: an append-only JSONL file records every committed, failed
+  and blocked change, with before/after values. Credentials are never
+  written to it.
+- **Undo**: `undo_change(change_id)` restores the "before" values of a
+  status, budget or bid change, through the same propose → confirm flow, and
+  refuses if the account changed again since.
 
-  # Option 3: Fine-grained control over tools in a category
-  metadata:
-    enabled: true
-    prefix: "metadata"
-    enabled_tools:
-      - get_resource_metadata: true
+Details and examples: [docs/SAFETY.md](docs/SAFETY.md).
 
-  # Option 4: Disable write/mutate categories for a strictly read-only server
-  labels: false
-  assets: false
-```
+> The MCP server exposes your account data to the AI assistant and model
+> provider you connect it to. Start with read-only mode and a test account.
 
+## Install
 
-### Resources available
+You need Python 3.10 or newer. The package is not on PyPI yet; install it
+from GitHub.
 
-- `discovery-document`: Retrieve the Google Ads API discovery document. Provides the discovery document for the latest version of the Google Ads API, which describes the API surface, including resources, methods, and schemas. Host LLMs should access this resource to understand the structure of the Google Ads API and discover available features.
-- `metrics`: Retrieve information about the metrics available for reporting in the Google Ads API.
-- `segments`: Retrieve information about the segments available for reporting in the Google Ads API.
-- `release-notes`: Retrieve the release notes for the latest version of the Google Ads API.
-
-## Notes
-
-1.  The MCP Server will expose your data to the Agent or LLM that you connect to it.
-1.  If you have technical issues, please use the [GitHub issue tracker](https://github.com/googleads/google-ads-mcp/issues).
-1.  To help us collect usage data, you will notice an extra header has been added to your API calls: this data is used to improve the product.
-
-## Setup instructions
-
-Setup involves the following steps:
-
-1.  Configure Python.
-1.  Enable APIs in your project
-1.  Configure Credentials.
-1.  Configure your MCP client.
-
-### Configure Python
-
-[Install pipx](https://pipx.pypa.io/stable/#install-pipx).
-
-After a version has been published to PyPI, you can run that exact version
-instead of following the latest repository state:
-
-```shell
-pipx run --spec "google-ads-mcp==X.Y.Z" google-ads-mcp
-```
-
-### Enable APIs in your project
-
-[Follow the instructions](https://support.google.com/googleapi/answer/6158841)
-to enable the following APIs in your Google Cloud project:
-
-* [Google Ads API](https://console.cloud.google.com/apis/library/googleads.googleapis.com)
-
-### Configure Credentials
-#### Option 1: Using FastMCP OAuth Proxy
-
-The server supports FastMCP's [OAuth proxy](https://gofastmcp.com/servers/auth/oauth-proxy) feature for dynamic user authentication. This is useful when running the server as a web service.
-
-To enable it, set the following environment variables:
-
-- `GOOGLE_ADS_MCP_OAUTH_CLIENT_ID`: Your Google Cloud OAuth 2.0 Client ID.
-- `GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET`: Your Google Cloud OAuth 2.0 Client Secret.
-- `GOOGLE_ADS_MCP_BASE_URL`: (Optional) The base URL where the server is accessible (defaults to `http://localhost:8080`).
-- `GOOGLE_ADS_MCP_JWT_SIGNING_KEY`: (Optional) Secret key used to sign FastMCP JWT tokens across multiple server instances or deployments.
-- `GOOGLE_ADS_MCP_STORAGE_TYPE`: (Optional) Storage backend for OAuth state (`filetree`, `redis`, `firestore`, or `memory`).
-- `GOOGLE_ADS_MCP_STORAGE_PATH`: (Optional) Directory path for `filetree` persistent storage.
-- `GOOGLE_ADS_MCP_STORAGE_REDIS_URL`: (Optional) Redis URL for `redis` persistent storage.
-- `GOOGLE_ADS_MCP_STORAGE_FIRESTORE_PROJECT`: (Optional) Google Cloud project for `firestore` persistent storage. Defaults to the project inferred from Application Default Credentials. Setting it selects the `firestore` backend even if `GOOGLE_ADS_MCP_STORAGE_TYPE` is unset.
-- `GOOGLE_ADS_MCP_STORAGE_FIRESTORE_DATABASE`: (Optional) Firestore database name for `firestore` persistent storage. Defaults to `(default)`.
-- `GOOGLE_ADS_MCP_STORAGE_ENCRYPTION_KEY`: (Optional) Encryption key for stored OAuth tokens.
-- `GOOGLE_ADS_MCP_STORAGE_DISABLE_ENCRYPTION`: (Optional) Set to `true` to disable token encryption.
-
-The `redis` and `firestore` backends need their storage library installed
-alongside the server: `pip install py-key-value-aio[redis]` and
-`pip install google-ads-mcp[firestore]` respectively.
-
-Once this is enabled, you can authenticate to the API through your MCP client.
-
-When these variables are set, the server automatically switches to the
-`streamable-http` transport instead of `stdio`.
-
-You will need to run the server as a separate process and configure your MCP
-client to connect to the Streamable HTTP endpoint (for example,
-`http://localhost:8080/mcp`).
-
-### Local WSL and Podman deployment
-
-This deployment has been tested with rootless Podman in WSL and exposes a single
-Streamable HTTP endpoint at `http://localhost:8080/mcp`. Build the image from
-the repository inside WSL:
+**pipx**
 
 ```shell
-podman build --tag localhost/google-ads-mcp:latest --file Dockerfile .
+pipx install git+https://github.com/duntik/ads-pilot-mcp.git
+# or run without installing:
+pipx run --spec git+https://github.com/duntik/ads-pilot-mcp.git ads-pilot-mcp
 ```
 
-Keep server credentials out of MCP client configuration. The tested Quadlet
-loads Google Ads and OAuth settings from a private host-side file through
-`EnvironmentFile=` and uses a separate named volume for persistent encrypted
-OAuth state:
-
-```ini
-[Container]
-Image=localhost/google-ads-mcp:latest
-PublishPort=127.0.0.1:8080:8080
-EnvironmentFile=/absolute/host/path/google-ads-mcp.env
-Volume=google-ads-mcp-oauth.volume:/var/lib/google-ads-mcp:rw
-ReadOnly=true
-NoNewPrivileges=true
-DropCapability=all
-```
-
-The environment file and the OAuth-state volume serve different purposes: the
-volume does not contain the `.env` file. Keep the environment file outside the
-repository, restrict it to the service owner, and never commit it. Antigravity
-and Codex then need only the MCP endpoint and their own OAuth authorization;
-they do not need the server's OAuth client secret,
-or signing and storage keys. Publish port 8080 only on the loopback interface
-when the server is intended for local agents.
-
-The endpoint deliberately keeps stateful Streamable HTTP enabled. It supports
-legacy MCP 2025 clients that use `Mcp-Session-Id` and GET SSE as well as MCP
-2026 clients that use sessionless POST requests and `subscriptions/listen`.
-Do not enable FastMCP's `stateless_http` option on this shared endpoint; doing
-so removes the legacy GET channel.
-
-The server runs on FastMCP 4 (`fastmcp>=4.0.6,<5`) paired with `mcp[cli]>=2.0.0,<3`. The Docker build also applies a version-guarded
-OAuth metadata workaround for Codex CLI 0.146. It stops advertising the RFC
-9207 authorization-response `iss` parameter as mandatory while FastMCP still
-includes it in redirects. The build fails if the expected FastMCP major version or
-patch location changes, so upgrades require explicit interoperability tests.
-
-For Codex, configure and authenticate the server as described in the
-[official Codex MCP documentation](https://developers.openai.com/codex/mcp/):
+**uv**
 
 ```shell
-codex mcp add google_ads --url http://localhost:8080/mcp
-codex mcp login google_ads
+uv tool install git+https://github.com/duntik/ads-pilot-mcp.git
+# or run without installing:
+uvx --from git+https://github.com/duntik/ads-pilot-mcp.git ads-pilot-mcp
 ```
 
-For Antigravity, configure the same URL as `serverUrl` in its MCP configuration.
-This key is required for Streamable HTTP in Antigravity 2.8.1 and Antigravity
-IDE 2.5.5; `httpUrl` is not accepted by those versions. After authentication,
-both clients should list these namespaced tools:
+**From source**
 
-- `assets_create_asset`
-- `assets_upload_video_asset`
-- `customers_list_accessible_customers`
-- `labels_manage_label_associations`
-- `labels_manage_labels`
-- `metadata_get_resource_metadata`
-- `search_search`
-
-#### Option 2: Configure credentials using Application Default Credentials
-
-Configure your [Application Default Credentials
-(ADC)](https://cloud.google.com/docs/authentication/provide-credentials-adc).
-Make sure the credentials are for a user with access to your Google Ads
-accounts or properties.
-
-Credentials must include the Google Ads API scope:
-
-```
-https://www.googleapis.com/auth/adwords
+```shell
+git clone https://github.com/duntik/ads-pilot-mcp.git
+cd ads-pilot-mcp
+uv venv && uv pip install -e ".[dev]"
 ```
 
-Check out
-[Manage OAuth Clients](https://support.google.com/cloud/answer/15549257)
-for how to create an OAuth client.
+Pin a release with `...ads-pilot-mcp.git@v0.1.0`.
 
-Here are some sample `gcloud` commands you might find useful:
+## Authentication
 
+There is no shared account or shared key: **each user brings their own
+Google Ads developer token and their own OAuth credentials.** The server
+only ever acts with the access your Google user already has.
 
-- Set up ADC using user credentials and an OAuth desktop or web client after
-  downloading the client JSON to `YOUR_CLIENT_JSON_FILE`.
+### 1. Developer token
+
+1. Sign in to a Google Ads **manager account** (create one for free if you
+   do not have one).
+2. Open **Admin → API Center** and copy the developer token.
+3. Set it as `GOOGLE_ADS_DEVELOPER_TOKEN` in the environment of the server.
+   Never commit it.
+
+The token's **access level** decides which accounts it can reach
+([Google's access levels page](https://developers.google.com/google-ads/api/docs/api-policy/access-levels)):
+
+| Access level | What you can do | How to get it |
+| --- | --- | --- |
+| **Test account access** | Only [test accounts](https://developers.google.com/google-ads/api/docs/best-practices/test-accounts). Production accounts return `DEVELOPER_TOKEN_NOT_APPROVED`. | Every new token starts here. |
+| **Basic access** | Production accounts, up to 15,000 operations per day. Enough for reports and day-to-day changes on your own accounts. | Apply in the API Center; Google reviews the application (it asks how you will use the API). |
+| Standard access | Higher limits, for tools that serve many accounts. | Apply after Basic access. |
+
+Start with a test account to try write tools safely: create a test manager
+account, create test client accounts under it, and point the server at them.
+Test accounts serve no ads and spend no money. Google may offer other
+intermediate levels; check the page above for the current list.
+
+### 2. OAuth credentials
+
+Pick one:
+
+- **Application Default Credentials (local, simplest).** Create an OAuth
+  client (type *Desktop app*) in a Google Cloud project with the Google Ads
+  API enabled, download its JSON, and run:
 
   ```shell
   gcloud auth application-default login \
@@ -231,274 +161,211 @@ Here are some sample `gcloud` commands you might find useful:
     --client-id-file=YOUR_CLIENT_JSON_FILE
   ```
 
-- Set up ADC using service account impersonation.
+  Then set `GOOGLE_APPLICATION_CREDENTIALS` to the credentials file that
+  `gcloud` prints, and `GOOGLE_PROJECT_ID` to your Cloud project ID.
 
-  ```shell
-  gcloud auth application-default login \
-    --impersonate-service-account=SERVICE_ACCOUNT_EMAIL \
-    --scopes=https://www.googleapis.com/auth/adwords,https://www.googleapis.com/auth/cloud-platform
-  ```
+- **OAuth proxy over HTTP (shared server).** Set
+  `GOOGLE_ADS_MCP_OAUTH_CLIENT_ID` and `GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET`;
+  the server then serves Streamable HTTP at `http://localhost:8080/mcp` and
+  each MCP client signs in with its own Google account. All storage and
+  deployment options of the upstream server apply unchanged; see the
+  [upstream README](https://github.com/googleads/google-ads-mcp#configure-credentials).
 
-When the `gcloud auth application-default` command completes, copy the
-`PATH_TO_CREDENTIALS_JSON` file location printed to the console in the
-following message. You will need this for a later step!
+If you reach accounts through a manager account, also set
+`GOOGLE_ADS_LOGIN_CUSTOMER_ID` (or pass `login_customer_id` per call).
 
-```
-Credentials saved to file: [PATH_TO_CREDENTIALS_JSON]
-```
-
-#### Option 3: Configure credentials using the Google Ads API Python client library.
-
-[Follow the instructions](https://developers.google.com/google-ads/api/docs/client-libs/python/)
-to setup and configure the Google Ads API Python client library
-
-If you have already done this and have a working `google-ads.yaml` , you can reuse this file!
-
-In the utils.py file, change get_googleads_client() to use the load_from_storage() method.
-
-### Configure your MCP client
-
-Add the server to your MCP client's configuration. Below are examples for
-popular clients.
-
-#### Antigravity / Antigravity IDE
-
-1.  Install [Antigravity](https://antigravity.google/product/antigravity-cli)
-    or Antigravity IDE.
-
-1.  Configure your server. Refer to the docs at [https://antigravity.google/docs/mcp](https://antigravity.google/docs/mcp) for details on setting up MCP servers.
-
-- Option 1: Using FastMCP OAuth Proxy (Streamable HTTP)
-
-  You can run the server as a separate process and configure your MCP client
-  to connect to the Streamable HTTP endpoint (for example,
-  `http://localhost:8080/mcp`).
-  This also allows using FastMCP's [OAuth proxy](https://gofastmcp.com/servers/auth/oauth-proxy) feature for dynamic user authentication.
-
-  Antigravity 2.8.1 and Antigravity IDE 2.5.5 require `serverUrl` for a
-  Streamable HTTP server. Do not use the older `httpUrl` key. Server-side
-  credentials belong in the server process, not in this client configuration.
-
-    ```json
-    {
-      "mcpServers": {
-        "google-ads-mcp": {
-          "serverUrl": "http://localhost:8080/mcp"
-        }
-      }
-    }
-    ```
-
-- Option 2: the Application Default Credentials method
-
-    This remains a supported alternative, but it provides less credential
-    isolation than the server-managed Streamable HTTP deployment above. The MCP
-    client starts the server and its configuration contains the ADC file path.
-    Prefer the Quadlet deployment when several
-    local clients share the same server or client configuration may be copied,
-    synchronized, or inspected by other tools.
-
-    Replace `PATH_TO_CREDENTIALS_JSON` with the path you copied in the previous
-    step.
-
-    We also recommend that you add a `GOOGLE_CLOUD_PROJECT` attribute to the
-    `env` object. Replace `YOUR_PROJECT_ID` in the following example with the
-    [project ID](https://support.google.com/googleapi/answer/7014113) of your
-    Google Cloud project.
-
-    ```json
-    {
-      "mcpServers": {
-        "google-ads-mcp": {
-          "command": "pipx",
-          "args": [
-            "run",
-            "--spec",
-            "git+https://github.com/googleads/google-ads-mcp.git",
-            "google-ads-mcp"
-          ],
-          "env": {
-            "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
-            "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID"
-          }
-        }
-      }
-    }
-    ```
-
-- Option 3: the Python client library method
-
-    ```json
-    {
-      "mcpServers": {
-        "google-ads-mcp": {
-          "command": "pipx",
-          "args": [
-            "run",
-            "--spec",
-            "git+https://github.com/googleads/google-ads-mcp.git",
-            "google-ads-mcp"
-          ],
-          "env": {
-            "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID"
-          }
-        }
-      }
-    }
-    ```
-
-#### Login Customer Id
-
-If your access to the customer account is through a manager account, you can
-either provide the manager account's customer ID per tool call via the optional
-`login_customer_id` parameter, or set `GOOGLE_ADS_LOGIN_CUSTOMER_ID` in the
-settings file as a default (the per-call `login_customer_id` parameter takes
-precedence when specified).
-
-See [here](https://developers.google.com/google-ads/api/docs/concepts/call-structure#cid) for details.
-
-The final file will look like this:
-
-  ```json
-  {
-    "mcpServers": {
-      "google-ads-mcp": {
-        "command": "pipx",
-        "args": [
-          "run",
-          "--spec",
-          "git+https://github.com/googleads/google-ads-mcp.git",
-          "google-ads-mcp"
-        ],
-        "env": {
-          "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
-          "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID",
-          "GOOGLE_ADS_LOGIN_CUSTOMER_ID": "YOUR_MANAGER_CUSTOMER_ID"
-        }
-      }
-    }
-  }
-  ```
-
-#### Other MCP clients (Claude Code, Cursor, VS Code, etc.)
-
-The `mcpServers` block format is the same across all MCP clients. Add the configuration shown above to the appropriate settings file for your client (e.g., `~/.claude/settings.json` for Claude Code, `.cursor/mcp.json` for Cursor, `.vscode/mcp.json` for VS Code with Copilot).
-
-## Deployment to Google Cloud Platform
-
-Instead of hosting this MCP server locally, you can host it on Google Cloud Run or on any other cloud-based infrastructure. This is useful if you want to share the server across different agents or run it as a web service.
-
-Note that this only supports authentication with an OAuth Client ID and Client Secret pair through the OAuth proxy (Option #1 above).
-
-### Prerequisites
-
-1.  A Google Cloud project.
-2.  The `gcloud` CLI installed, authenticated, and active project set.
-    ```shell
-    gcloud config set project YOUR_PROJECT_ID
-    ```
-
-### Step 1: Build and Push Docker Image
-
-You can use Cloud Build to build and push the image to Artifact Registry without needing Docker installed locally.
-
-1.  Create a repository in Artifact Registry:
-    ```shell
-    gcloud artifacts repositories create mcp-servers --repository-format=docker --location=us-central1
-    ```
-2.  Build and submit the image:
-    ```shell
-    gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/mcp-servers/google-ads-mcp:latest .
-    ```
-    Replace `YOUR_PROJECT_ID` with your Google Cloud project ID.
-
-### Step 2: Deploy to Google Cloud Run
-
-Make sure to set the required environment variables:
-
-- `GOOGLE_PROJECT_ID`: Your Google Cloud project ID.
-- `GOOGLE_ADS_MCP_OAUTH_CLIENT_ID`: The OAuth Client ID you want the MCP server to use.
-- `GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET`: The OAuth Client secret you want the MCP server to use.
-- `GOOGLE_ADS_MCP_BASE_URL`: The base URL where your MCP server is accessible: this will be automatically assigned by Google Cloud Run after your first deployment. You can update the environment variables after deployment. 
-- `GOOGLE_ADS_MCP_JWT_SIGNING_KEY`: (Recommended for production) Persistent JWT signing key across Cloud Run instances.
-- `GOOGLE_ADS_MCP_STORAGE_TYPE`: (Recommended for production) Storage backend to persist OAuth tokens across instances. Set it to `firestore` to use Firestore through Application Default Credentials, which needs no VPC connector, or to `redis` along with `GOOGLE_ADS_MCP_STORAGE_REDIS_URL`.
-
-  Using `firestore` requires three things: build the image with the extra
-  installed (change the Dockerfile to `uv pip install --system .[firestore]`),
-  create a Firestore database in the project, since one is not provisioned
-  automatically, and grant the Cloud Run service account `roles/datastore.user`.
-  Note that entries are not expired automatically: the store filters expired
-  entries on read but never deletes them, and `expires_at` is written as a
-  string, so a Firestore TTL policy cannot collect them either. Plan on a
-  periodic cleanup job for long-running deployments. Redis expires entries on
-  its own.
-- `FASTMCP_HOST`: Set this to `0.0.0.0` to allow FastMCP to accept connections from all IP addresses.
-- `GOOGLE_ADS_LOGIN_CUSTOMER_ID`: Required if your access to the customer account is through a manager account. Set it to the customer ID of the manager account. See [Login Customer Id](#login-customer-id) above for details.
-
-```shell
-gcloud run deploy google-ads-mcp \
-  --image us-central1-docker.pkg.dev/YOUR_PROJECT_ID/mcp-servers/google-ads-mcp:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars="GOOGLE_PROJECT_ID=YOUR_PROJECT_ID,GOOGLE_ADS_MCP_OAUTH_CLIENT_ID=YOUR_CLIENT_ID,GOOGLE_ADS_MCP_OAUTH_CLIENT_SECRET=YOUR_CLIENT_SECRET,GOOGLE_ADS_MCP_BASE_URL=YOUR_BASE_URL,GOOGLE_ADS_MCP_JWT_SIGNING_KEY=YOUR_JWT_SIGNING_KEY,GOOGLE_ADS_MCP_STORAGE_TYPE=firestore,FASTMCP_HOST=0.0.0.0"
-```
-
-### Step 3: Configure MCP Client
-
-Once deployed, update your MCP client configuration (refer to the docs at [https://antigravity.google/docs/mcp](https://antigravity.google/docs/mcp)) to use the Cloud Run URL.
+### 3. MCP client configuration
 
 ```json
 {
   "mcpServers": {
-    "google-ads-mcp": {
-      "httpUrl": "https://your-cloud-run-url.a.run.app/mcp"
+    "ads-pilot": {
+      "command": "pipx",
+      "args": [
+        "run",
+        "--spec",
+        "git+https://github.com/duntik/ads-pilot-mcp.git",
+        "ads-pilot-mcp"
+      ],
+      "env": {
+        "GOOGLE_ADS_DEVELOPER_TOKEN": "YOUR_DEVELOPER_TOKEN",
+        "GOOGLE_APPLICATION_CREDENTIALS": "PATH_TO_CREDENTIALS_JSON",
+        "GOOGLE_PROJECT_ID": "YOUR_PROJECT_ID",
+        "GOOGLE_ADS_LOGIN_CUSTOMER_ID": "YOUR_MANAGER_CUSTOMER_ID",
+        "ADS_PILOT_READ_ONLY": "true"
+      }
     }
   }
 }
 ```
 
-## Try it out
+The same block works in Claude Code / Claude Desktop, Cursor
+(`.cursor/mcp.json`), VS Code (`.vscode/mcp.json`) and other clients. Remove
+`ADS_PILOT_READ_ONLY` once you want to allow changes. Keep this file private:
+it contains your developer token.
 
-Launch your MCP client. You should see `google-ads-mcp` listed in the
-available servers.
+The server adds the upstream usage header (`x-goog-api-client`) to API calls,
+as `google-ads-mcp` does.
 
-Here are some sample prompts to get you started:
+## Configuration
 
-- Ask what the server can do:
+Configuration lives in `tools_config.yaml`, resolved in this order:
 
-  ```
-  what can the ads-mcp server do?
-  ```
+1. the path in `GOOGLE_ADS_MCP_TOOLS_CONFIG`;
+2. `tools_config.yaml` in the working directory;
+3. the default file bundled with the package.
 
-- Ask about customers:
+```yaml
+namespaces:
+  customers: true
+  search: true
+  metadata: true
+  labels: true      # upstream mutate tools
+  assets: true      # upstream mutate tools
+  reports: true     # ads-pilot-mcp report tools
+  safety: true      # get_safety_settings, list_changes, undo_change
 
-  ```
-  what customers do I have access to?
-  ```
+safety:
+  read_only: false
+  allowed_customer_ids: []          # empty = every account you can access
+  max_operations_per_mutate: 100
+  max_budget_increase_pct: 50       # per change
+  max_daily_budget: null            # account currency, null = no limit
+  max_bid_change_pct: 50            # up or down, bids and tCPA/tROAS
+  max_cpc: null                     # account currency
+  audit_log: true
+  audit_log_path: null              # default <state_dir>/audit.jsonl
+  state_dir: null                   # default: per-user data directory
+  customer_overrides:
+    "1234567890":
+      max_daily_budget: 500
+```
 
-- Ask about campaigns 
+If you keep your own `tools_config.yaml` from upstream, add `reports: true`
+and `safety: true` under `namespaces`, or those tools stay hidden.
 
-  ```
-  How many active campaigns do I have?
-  ```
+Environment variables override the yaml file:
 
-  ```
-  How is my campaign performance this week?
-  ```
+| Variable | Meaning |
+| --- | --- |
+| `ADS_PILOT_READ_ONLY` | `true` hides and refuses every mutation |
+| `ADS_PILOT_ALLOWED_CUSTOMER_IDS` | Comma-separated customer IDs that may be changed |
+| `ADS_PILOT_MAX_OPERATIONS` | Max operations per mutate call |
+| `ADS_PILOT_MAX_BUDGET_INCREASE_PCT` | Max budget increase per change, in % |
+| `ADS_PILOT_MAX_DAILY_BUDGET` | Max daily budget, account currency |
+| `ADS_PILOT_MAX_BID_CHANGE_PCT` | Max bid / target change per change, in % |
+| `ADS_PILOT_MAX_CPC` | Max CPC bid, account currency |
+| `ADS_PILOT_AUDIT_LOG` | `false` turns the audit log off |
+| `ADS_PILOT_AUDIT_LOG_PATH` | Audit log file |
+| `ADS_PILOT_STATE_DIR` | Directory for the audit log and undo snapshots |
 
-### Note about Customer ID
+Use `none` for "no limit". Invalid values or unknown keys stop the server
+at start-up rather than silently dropping a limit.
 
-Your agent will need and ask for a customer id for most prompts. If you are 
-moving between multiple customers, including the customer ID in the prompt may
-be simpler.
+The upstream variables (`GOOGLE_ADS_DEVELOPER_TOKEN`,
+`GOOGLE_ADS_LOGIN_CUSTOMER_ID`, `GOOGLE_ADS_MCP_OAUTH_*`,
+`GOOGLE_ADS_MCP_STORAGE_*`, `PORT`) work as documented upstream.
+
+## Tools
+
+Tool names are prefixed with their namespace, e.g. `reports_account_overview`.
+
+### Reports (`reports`, read only)
+
+All report tools take `customer_id` (digits, hyphens allowed), optional
+`login_customer_id`, and `limit` / `offset` for paging (the response has
+`next_offset`). Date-based reports take `date_range` (`TODAY`, `YESTERDAY`,
+`LAST_7_DAYS`, `LAST_14_DAYS`, `LAST_30_DAYS`, `THIS_MONTH`, `LAST_MONTH`) or
+`start_date` + `end_date`.
+
+| Tool | What it answers |
+| --- | --- |
+| `account_overview` | Spend, clicks, impressions, conversions and cost/conv by campaign, plus account totals |
+| `wasted_spend` | Search terms and keywords with cost > X and zero conversions, by cost |
+| `search_terms_report` | Search terms with match type and a `suggested_negative` flag |
+| `keyword_performance` | Keywords with Quality Score and its three components, effective CPC, impression share |
+| `landing_page_performance` | Final or expanded landing page URLs with speed score and mobile-friendly click rate |
+| `geo_performance` | Locations (`geographic_view` or `user_location_view`) by country, region, city or most specific, with names |
+| `ad_performance` | Ads with ad strength and approval; RSA headline/description performance labels |
+| `budget_pacing` | Month-to-date spend vs each budget, pace and full-month projection |
+| `change_history` | Who changed what in the last 1-30 days (`change_event`), optionally with old/new values |
+| `conversion_actions` | Conversion actions: status, primary/secondary, include-in-conversions, GA4 import, 30-day counts |
+| `recommendations_list` | Google recommendations with estimated impact (read only; nothing is applied) |
+
+Each report returns `rows` (or named sections), `totals` where useful,
+`notes` with caveats, and a `summary` in markdown.
+
+### Safety (`safety`)
+
+| Tool | Description |
+| --- | --- |
+| `get_safety_settings` | Shows read-only mode, the allow-list and the limits in force |
+| `list_changes` | Recent reversible changes and their `change_id` |
+| `undo_change` | Reverts a change by `change_id` (propose → confirm) |
+
+### Upstream tools (unchanged)
+
+| Tool | Description |
+| --- | --- |
+| `search_search` | Any GAQL query |
+| `metadata_get_resource_metadata` | Fields available on a resource |
+| `customers_list_accessible_customers` | Customer IDs your user can access |
+| `assets_create_asset` | Create text, image, video, sitelink, callout and other assets |
+| `assets_upload_video_asset` | Upload a local video to YouTube via Google Ads (stdio mode only) |
+| `labels_manage_labels` | Create, update and remove labels |
+| `labels_manage_label_associations` | Attach labels to campaigns, ad groups, criteria, customers |
+
+The upstream resources (`discovery-document`, `metrics`, `segments`,
+`release-notes`) are also available.
+
+### Example prompts
 
 ```
-How many active campaigns do I have for customer id 1234567890
+What did each campaign spend last month in account 1234567890, and at what cost per conversion?
+Which search terms cost more than 20 and never converted in the last 30 days?
+Are my budgets on track this month?
+What changed in the account this week, and who changed it?
+Which conversion actions are primary, and are any of them not recording?
 ```
 
-## Contributing
+## Roadmap
 
-Contributions welcome! See the [Contributing Guide](CONTRIBUTING.md).
-Project maintainers can find the Trusted Publishing and release procedure in
-the [release guide](docs/releasing.md).
+- **Stage 1 (this release):** report tools and the safety layer.
+- **Stage 2:** write tools through the safety layer — statuses, budgets,
+  bids and tCPA/tROAS, keywords and negative keywords, RSAs, final URLs,
+  location and ad schedule targeting, sitelink/callout/call assets, GA4
+  conversion import, applying and dismissing recommendations.
+- **Stage 3:** Keyword Planner, bulk operations, experiments overview.
+- **Stage 4:** test-account end-to-end guide, release workflow, PyPI.
+
+Each planned tool, with its inputs, API service, safety checks and undo, is
+in [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Development
+
+```shell
+uv venv && uv pip install -e ".[dev]"
+nox -s tests-3.13          # all unit tests (upstream + ads-pilot)
+python -m unittest discover -s tests/pilot -t tests -p "*_test.py"
+nox -s lint                # black, 80 columns
+nox -s smoke_tests         # tool list vs tests/smoke/golden_tools_list.json
+nox -s update_smoke_golden # after adding or changing a tool (use Python 3.13)
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Report problems at
+<https://github.com/duntik/ads-pilot-mcp/issues>, not on the upstream
+tracker.
+
+## Disclaimer
+
+ads-pilot-mcp is an independent open-source project. **It is not affiliated
+with or endorsed by Google. Based on googleads/google-ads-mcp.** It is
+provided "as is", without warranty of any kind (see [LICENSE](LICENSE)).
+You are responsible for every change made to your accounts with it and for
+complying with the
+[Google Ads API Terms and Conditions](https://developers.google.com/google-ads/api/terms).
+Review every proposed change before you confirm it.
+
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE) and
+[NOTICE](NOTICE) for the upstream copyright and the list of changes.

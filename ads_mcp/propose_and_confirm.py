@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Modified by ads-pilot-mcp contributors: optional safety hook (see
+# ads_mcp/safety/hooks.py) for read-only mode, policy limits, audit and undo.
 
 """Generalized propose-and-confirm workflow utilities for MCP mutate tools."""
 
@@ -32,6 +35,20 @@ import proto
 from ads_mcp import utils
 
 logger = logging.getLogger(__name__)
+
+# ads-pilot-mcp: optional safety hook. ``None`` keeps upstream behaviour.
+_safety_hook: Any = None
+
+
+def set_safety_hook(hook: Any) -> None:
+    """Installs (or clears, with ``None``) the optional safety hook.
+
+    The hook must provide ``before(...)``, which may raise ``ToolError`` to
+    block a mutation, and ``wrap_commit(commit_fn, ...)``, which returns the
+    commit function to call. See ``ads_mcp.safety.hooks.SafetyHook``.
+    """
+    global _safety_hook
+    _safety_hook = hook
 
 
 @dataclass(frozen=True)
@@ -288,6 +305,21 @@ def propose_and_confirm(
          constant time before executing any mutation.
       2. Calls ``commit_fn()`` to commit the mutation and returns its result.
     """
+    hook = _safety_hook
+    if hook is not None:
+        hook.before(
+            customer_id=customer_id,
+            validate_only=validate_only,
+            operation_payload=operation_payload,
+            change_items=change_items,
+        )
+        commit_fn = hook.wrap_commit(
+            commit_fn,
+            customer_id=customer_id,
+            operation_payload=operation_payload,
+            change_items=change_items,
+        )
+
     expected_checksum = compute_checksum(customer_id, operation_payload)
 
     if validate_only:
